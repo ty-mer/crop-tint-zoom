@@ -1,28 +1,51 @@
 var sizeOf = require('image-size');
-const { exec } = require("child_process");
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
+const fs = require("fs");
+
+const path = '/Users/tylermerle/Downloads/gws_photos';
 const cropByPercent = .09;
-async function main() {
-	const path = '/Users/tylermerle/Downloads/gws_photos/Omar Huerta - 16323225259848555278468269374968.jpg';
-	var dimensions = sizeOf(path);
-	console.log(dimensions.width, dimensions.height);
+
+async function cropZoomTint(file) {
+	var dimensions = sizeOf(file);
+
 	let cropBy = { x: dimensions.width * cropByPercent, y: dimensions.height * cropByPercent };
-	let radians = 111 * cropByPercent;
 	let colors = ["yellow", "blue", "green"];
-	let color = colors[Math.floor(Math.random() * colors.length)];
-	console.log(color);
-	const cmd = `~/Downloads/ffmpeg -i "${path}" -f lavfi -i "color=${color}:s=${dimensions.width}x${dimensions.height}" -filter_complex "scale=${dimensions.width}:${dimensions.height},rotate=-${radians}*PI/180,crop=${dimensions.width - (cropBy.x * 2)}:${dimensions.height - (cropBy.y * 2)}:${cropBy.x}:${cropBy.y},scale=${dimensions.width}:${dimensions.height},blend=shortest=1:all_mode=overlay:all_opacity=0.05" output_${color}.jpeg`;
-	console.log(cmd);
-	exec(cmd, (error, stdout, stderr) => {
-		if (error) {
-			console.log(`error: ${error.message}`);
-			return;
+	let color = colors[Math.floor(Math.random() * colors.length)]; // get random color
+
+	const cmd = `~/Downloads/ffmpeg -i "${file}" -f lavfi -i "color=${color}:s=${dimensions.width}x${dimensions.height}" -filter_complex "scale=${dimensions.width}:${dimensions.height},rotate=-5*PI/180,crop=${dimensions.width - (cropBy.x * 2)}:${dimensions.height - (cropBy.y * 2)}:${cropBy.x}:${cropBy.y},scale=${dimensions.width}:${dimensions.height},blend=shortest=1:all_mode=overlay:all_opacity=0.05" ~/Downloads/output/${guid()}.jpeg`;
+
+	await exec(cmd);
+}
+
+function guid() {
+	const gen = (count) => {
+		let out = "";
+		for (let i = 0; i < count; i++) {
+			out += (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
 		}
-		if (stderr) {
-			console.log(`stderr: ${stderr}`);
-			return;
+		return out;
+	}
+
+	return [gen(2), gen(1), gen(1), gen(1), gen(3)].join("-");
+}
+
+async function main() {
+	const files = await fs.promises.readdir(path);
+	let errors = [];
+
+	for (const file of files) {
+		console.log(file);
+		try {
+			await cropZoomTint(path + "/" + file.toString());
+		} catch (e) {
+			errors.push(path + "/" + file.toString());
 		}
-		console.log(`stdout: ${stdout}`);
-	});
+	}
+
+	console.log(errors.join("\n"));
+
+	process.exit();
 }
 
 main();
