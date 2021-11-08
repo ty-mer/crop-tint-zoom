@@ -3,7 +3,8 @@ const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 const fs = require("fs");
 
-const path = '/Users/tylermerle/Downloads/gws_photos';
+const readPath = '/Users/tylermerle/Downloads/gws_photos';
+const writePath = `~/Downloads/output`;
 const cropByPercent = .09;
 
 async function cropZoomTint(file) {
@@ -13,7 +14,8 @@ async function cropZoomTint(file) {
 	let colors = ["yellow", "blue", "green"];
 	let color = colors[Math.floor(Math.random() * colors.length)]; // get random color
 
-	const cmd = `~/Downloads/ffmpeg -i "${file}" -f lavfi -i "color=${color}:s=${dimensions.width}x${dimensions.height}" -filter_complex "scale=${dimensions.width}:${dimensions.height},rotate=-5*PI/180,crop=${dimensions.width - (cropBy.x * 2)}:${dimensions.height - (cropBy.y * 2)}:${cropBy.x}:${cropBy.y},scale=${dimensions.width}:${dimensions.height},blend=shortest=1:all_mode=overlay:all_opacity=0.05" ~/Downloads/output/${guid()}.jpeg`;
+	// TODO: (TRM) use ffmpeg npm package instead of relying on `exec` and a local, external copy of ffmpeg
+	const cmd = `~/Downloads/ffmpeg -i "${file}" -f lavfi -i "color=${color}:s=${dimensions.width}x${dimensions.height}" -filter_complex "scale=${dimensions.width}:${dimensions.height},rotate=-5*PI/180,crop=${dimensions.width - (cropBy.x * 2)}:${dimensions.height - (cropBy.y * 2)}:${cropBy.x}:${cropBy.y},scale=${dimensions.width}:${dimensions.height},blend=shortest=1:all_mode=overlay:all_opacity=0.05" ${writePath}/${guid()}.jpeg`;
 
 	await exec(cmd);
 }
@@ -31,15 +33,15 @@ function guid() {
 }
 
 async function main() {
-	const files = await fs.promises.readdir(path);
+	const files = await fs.promises.readdir(readPath);
 	let errors = [];
 
 	for (const file of files) {
 		console.log(file);
 		try {
-			await cropZoomTint(path + "/" + file.toString());
+			await cropZoomTint(readPath + "/" + file.toString());
 		} catch (e) {
-			errors.push(path + "/" + file.toString());
+			errors.push(readPath + "/" + file.toString());
 		}
 	}
 
